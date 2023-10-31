@@ -9,9 +9,10 @@ import (
 )
 
 type Config struct {
-	Env    string `yaml:"env"    env-default:"local"`
-	Port   string `yaml:"port"   env-default:":8080"`
-	Server `       yaml:"server"`
+	Env         string `yaml:"env"    env-default:"local"`
+	Port        string `yaml:"port"   env-default:":8080"`
+	Server      `       yaml:"server"`
+	DatabaseURL string `yaml:"database_url"`
 }
 
 type Server struct {
@@ -20,8 +21,8 @@ type Server struct {
 	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
 }
 
-func MustLoad() *Config {
-	configPath := "./config/local.yaml" // os.Getenv("CONFIG_PATH")
+func New() *Config {
+	configPath := "./internal/config/local.yaml" // os.Getenv("CONFIG_PATH")
 	if configPath == "" {
 		log.Fatal("CONFIG_PATH is not set")
 	}

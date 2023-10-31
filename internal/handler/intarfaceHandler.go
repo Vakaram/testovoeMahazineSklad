@@ -2,7 +2,7 @@ package handler
 
 import (
 	"context"
-	"github.com/Vakaram/sterAuto/internal/models" // все будут зависить от моделей но от друг друга зависеть не будут
+	"github.com/Vakaram/testovoeMahazineSklad/internal/models" // все будут зависить от моделей но от друг друга зависеть не будут
 	// суть сделать так чтобы мы обрабатывали и меняли юзера внутри ничего не меняем а вот самого юзера меняем и зависим
 )
 

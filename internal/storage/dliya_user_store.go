@@ -2,7 +2,7 @@ package storage
 
 import (
 	"context"
-	"github.com/Vakaram/sterAuto/internal/models"
+	"github.com/Vakaram/testovoeMahazineSklad/internal/models"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log"
 )
@@ -17,13 +17,13 @@ type Config struct {
 
 func New(cfg Config) *storage {
 	//проверка пула на ошибку
-	p, err := pgxpool.New(context.Background(), cfg.ConnectionString)
+	poolNew, err := pgxpool.New(context.Background(), cfg.ConnectionString)
 	if err != nil {
 		log.Fatal(err)
 	}
 	//всегда передавай ссылку на storage чтобы изменить его иначен не вернуь будет ошибка
 	s := &storage{
-		poll: p,
+		poll: poolNew,
 	}
 
 	return s
@@ -32,6 +32,7 @@ func New(cfg Config) *storage {
 // init создание таблиц
 func (s *storage) init() {
 	// todo написать таблицы
+
 }
 
 func (s *storage) Create(ctx context.Context, user models.CreateUser) (models.User, error) {

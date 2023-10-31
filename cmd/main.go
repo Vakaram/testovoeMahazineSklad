@@ -1,12 +1,18 @@
 package main
 
-import "testovoezadanie1/internal/app"
+import (
+	"github.com/Vakaram/testovoeMahazineSklad/internal/app"
+	"github.com/Vakaram/testovoeMahazineSklad/internal/config"
+	"github.com/sirupsen/logrus"
+)
 
 func main() {
-	config := config.New() // здесь должна строка появиться
-	app := app.New(app.Config{
-		Address:          "127.0.0.1:8080",
-		ConnectionString: config.stringConnectionDB,
+	configMain := config.New() // здесь должна строка появиться
+	myApp := app.New(app.Config{
+		Address:          configMain.Address,
+		ConnectionString: configMain.DatabaseURL,
 	})
-	app.Start()
+	logrus.Info("Программа запущена")
+	myApp.Start()
+
 }

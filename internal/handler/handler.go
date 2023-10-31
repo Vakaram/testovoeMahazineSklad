@@ -3,7 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"github.com/Vakaram/sterAuto/internal/models"
+	"github.com/Vakaram/testovoeMahazineSklad/internal/models"
 	"github.com/gorilla/mux"
 	"io"
 	"net/http"

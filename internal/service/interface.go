@@ -3,7 +3,7 @@ package service
 // делается чтобы user напрямую не мог вызывать базу данных
 import (
 	"context"
-	"github.com/Vakaram/sterAuto/internal/models"
+	"github.com/Vakaram/testovoeMahazineSklad/internal/models"
 )
 
 type userStorage interface {

@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/Vakaram/sterAuto/internal/models"
+	"github.com/Vakaram/testovoeMahazineSklad/internal/models"
 )
 
 // тут описываем методы для утинной типиазции и тогда она сработает

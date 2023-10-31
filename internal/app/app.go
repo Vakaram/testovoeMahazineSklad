@@ -1,9 +1,10 @@
 package app
 
 import (
-	"github.com/Vakaram/sterAuto/internal/handler"
-	"github.com/Vakaram/sterAuto/internal/service"
-	"github.com/Vakaram/sterAuto/internal/storage"
+	"github.com/Vakaram/testovoeMahazineSklad/internal/handler"
+	"github.com/Vakaram/testovoeMahazineSklad/internal/service"
+	"github.com/Vakaram/testovoeMahazineSklad/internal/storage"
+	"github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -12,6 +13,8 @@ import (
 type app struct {
 	address string
 	handler http.Handler
+	logger  *logrus.Logger //добавляем логгер
+
 }
 type Config struct {
 	Address          string
@@ -34,7 +37,8 @@ func New(cfg Config) *app {
 
 	vozvratim := &app{
 		address: cfg.Address,
-		handler: h.Handler(), // вызвали функцию которая станет доаступна в h
+		handler: h.Handler(),  // вызвали функцию которая станет доаступна в h
+		logger:  logrus.New(), // logrus.NewStore() - это встроенно в логрус а не нами написано
 	}
 	return vozvratim
 }
