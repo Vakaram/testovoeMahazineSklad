@@ -31,3 +31,8 @@ type GoodsRacks struct {
 	RackID  int  `db:"rack_id"`
 	IsMain  bool `db:"is_main"`
 }
+
+// ордеры которые приходят чтобы получить инфу
+type RequestedOrders struct {
+	Num int
+}
