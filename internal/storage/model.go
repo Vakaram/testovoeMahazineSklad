@@ -25,9 +25,9 @@ type Rack struct {
 	Name string `db:"name"`
 }
 
-// RackGoods стелажи на которых лежит товар
-type RackGoods struct {
-	RackID  int  `db:"rack_id"`
+// GoodsRacks стелажи на которых лежит товар
+type GoodsRacks struct {
 	GoodsID int  `db:"goods_id"`
-	Is_main bool `db:"is_main"`
+	RackID  int  `db:"rack_id"`
+	IsMain  bool `db:"is_main"`
 }
