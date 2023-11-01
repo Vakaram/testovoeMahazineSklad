@@ -36,3 +36,24 @@ type GoodsRacks struct {
 type RequestedOrders struct {
 	Num int
 }
+
+//// Страница сборки заказов ответ
+//type OrderAssemblyPage struct {
+//	RackPage  Rack
+//	GoodsPage Goods
+//	OrdersNum Orders
+//	OrderSum  OrdersGoods
+//}
+
+// Страница сборки заказов ответ
+type OrderAssemblyPage struct {
+	RackPage    Rack        //стелаж
+	Description Description // описание что лежит в стелаже для удобного парса
+
+}
+
+type Description struct {
+	GoodsPage Goods       //id товара и название
+	OrdersNum Orders      //номер заказа
+	OrderSum  OrdersGoods //кол-во в заказе штук
+}
