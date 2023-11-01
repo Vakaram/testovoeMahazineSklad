@@ -1,18 +1,25 @@
 package main
 
 import (
+	"fmt"
 	"github.com/Vakaram/testovoeMahazineSklad/internal/app"
-	"github.com/Vakaram/testovoeMahazineSklad/internal/config"
-	"github.com/sirupsen/logrus"
+	"github.com/Vakaram/testovoeMahazineSklad/internal/storage"
+	"testing"
 )
 
 func main() {
-	configMain := config.New() // здесь должна строка появиться
-	myApp := app.New(app.Config{
-		Address:          configMain.Address,
-		ConnectionString: configMain.DatabaseURL,
-	})
-	logrus.Info("Программа запущена")
-	myApp.Start()
+	// Получаем конфиг
+	configStore := storage.ParseConfigDB()
+	// Создаем pool для бд
+	myStore := storage.New(configStore)
+	//Создание таблиц в базе данных и схем
+	err := myStore.InitTable()
+	testing.Init()
+	if err != nil {
+		fmt.Printf("Ошибка при создание таблиц: %s ", err.Error())
+		return
+	}
 
+	app.Start()
+	fmt.Println("Старт программы ")
 }
