@@ -14,22 +14,36 @@ type app struct {
 	Store *storage.Store
 }
 
-func Start() {
+// Start запуск приложение и ожидание ввода
+func Start(myStore *storage.Store) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Print("Enter text: ")
 		text, _ := reader.ReadString('\n')
-		// Обработка введенного текста
-		//todo получить запросы по сплиту , запятой дальше придумаем че делать
-		//тут создадим и отправим в  фукнцию для дальнейшей работы и логики
-		_, err := SplitRequest(text)
+		//разобрали ответ на id заказов которые нужно чекнуть в бд
+		requestOrdersInput, err := SplitRequest(text)
 		if err != nil {
 			logrus.Panic(err)
 		}
-		//fmt.Printf("Вот введеный вами текст : %s", text)
+		//теперь получим наши ID товаров связанные с заказом
+		massivOrders := []int{}
+		for _, v := range requestOrdersInput {
+			massivOrders = append(massivOrders, v.Num)
+		}
+
+		order, err := myStore.ChecOrder(massivOrders)
+		//logrus.Info("Получили заказы функцию вызвали")
+		if err != nil {
+			logrus.Debug(err)
+			return
+		}
+		for _, g := range order {
+			fmt.Printf("Получил вот такой товар по поиску  : %s ", g)
+		}
 	}
 }
 
+// SplitRequest сплитует заказы по запятой формирует стрктуру
 func SplitRequest(text string) ([]storage.RequestedOrders, error) {
 	nums := strings.Split(text, ",")
 	var requestNums []storage.RequestedOrders
@@ -38,7 +52,8 @@ func SplitRequest(text string) ([]storage.RequestedOrders, error) {
 		requestNums = append(requestNums, storage.RequestedOrders{Num: numInt})
 	}
 	for _, orderInt := range requestNums {
-		fmt.Printf("Заказ такой : %d \n ", orderInt.Num)
+		fmt.Printf("Заказ такой :%d \n ", orderInt.Num)
 	}
+
 	return requestNums, nil
 }

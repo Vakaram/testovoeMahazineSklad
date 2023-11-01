@@ -20,6 +20,6 @@ func main() {
 		return
 	}
 
-	app.Start()
+	app.Start(myStore)
 	fmt.Println("Старт программы ")
 }

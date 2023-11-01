@@ -227,3 +227,59 @@ func (st *Store) addDate() error {
 	logrus.Info("Заполнили всеми нужными данными")
 	return nil
 }
+
+// todo дописать проверку на вообще есть ли такой id в базе если нет то пропускаем и пишем в ответ такого заказа нет в базе
+func (st *Store) ChecOrderInDB(id int) (bool, error) {
+	var exists bool // существует?
+	err := st.pool.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM store.orders WHERE num = $1)", id).Scan(&exists)
+	if err != nil {
+		// обработка ошибки
+		logrus.Error("Ошибка при выполнении запроса к базе данных: ", err)
+		return false, err
+	}
+	if exists {
+		logrus.Info("Запись существует по ID")
+		return true, nil
+	} else {
+		logrus.Info("Запись не существует по ID")
+		return false, nil
+	}
+}
+
+// Запрос по id Order наши товары и их кол-во в заказе
+func (st *Store) ChecOrder(id []int) (idGoods []Orders, err error) {
+	var goodsIDsum []Orders
+
+	for _, v := range id {
+		check, _ := st.ChecOrderInDB(v)
+		if check == true {
+			fmt.Printf("True вижу для id %d", v)
+
+			rows, err := st.pool.Query(context.Background(), "SELECT goods_id FROM store.orders_goods WHERE orders_id = $1", v)
+			if err != nil {
+				return nil, err
+			}
+			//Вопрос а нужно ли тут закрывать rows ?
+			defer rows.Close()
+
+			for rows.Next() {
+				var goodsID int
+				if err := rows.Scan(&goodsID); err != nil {
+					// обработка ошибки
+					return nil, err
+				}
+				goodsIDsum = append(goodsIDsum, Orders{ID: goodsID})
+			}
+
+			if err := rows.Err(); err != nil {
+				return nil, err
+			}
+
+		} else {
+			return nil, err
+		}
+	}
+	fmt.Printf("Структуру такая %v", goodsIDsum)
+
+	return goodsIDsum, nil
+}
