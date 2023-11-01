@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/Vakaram/testovoeMahazineSklad/internal/models"
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/lib/pq"
 	"log"
 )
 
@@ -36,7 +37,17 @@ func (s *storage) init() {
 }
 
 func (s *storage) Create(ctx context.Context, user models.CreateUser) (models.User, error) {
-	// todo написать запрос
+	query := `
+    INSERT INTO users (first_name, last_name, age, email)
+    VALUES ($1, $2, $3, $4)
+    RETURNING id, first_name, last_name, age, email
+  `
+	var newUser models.User
+	err := s.poll.QueryRow(ctx, query, user.FirstName, user.LastName, user.Age, user.Email).Scan(&newUser.ID, &newUser.FirstName, &newUser.LastName, &newUser.Age, &newUser.Email)
+	if err != nil {
+		return models.User{}, err
+	}
+
 	return models.User{}, nil
 }
 func (s *storage) Update(ctx context.Context, id int, user models.UpdateUser) (models.User, error) {

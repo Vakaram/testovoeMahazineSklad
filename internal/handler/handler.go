@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/Vakaram/testovoeMahazineSklad/internal/models"
 	"github.com/gorilla/mux"
 	"io"
@@ -54,7 +55,7 @@ func (h *handler) createUser(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
+	fmt.Printf("пришел запрос с такими параметрами: %v", newUser)
 	user, err := h.UserService.Create(ctx, newUser)
 	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)

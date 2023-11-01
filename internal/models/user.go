@@ -3,7 +3,7 @@ package models
 // этот пакет вынесен выше спициально чтобы быть выше по уровню и чтобы его все видели hendler api и подобное
 
 type User struct {
-	Id        int    `json:"id"`
+	ID        int    `json:"id"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Age       int    `json:"age"`
@@ -15,6 +15,8 @@ type CreateUser struct {
 	LastName  string `json:"last_name"`
 	Age       int    `json:"age"`
 	Email     string `json:"email"`
+	Login     string `json:"login"`
+	Password  string `json:"password"`
 }
 
 type UpdateUser struct {

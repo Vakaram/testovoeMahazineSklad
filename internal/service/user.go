@@ -26,7 +26,7 @@ func New(cfg Config) *service {
 func (s *service) Create(ctx context.Context, newUser models.CreateUser) (models.User, error) {
 	//такие раз и в легку проверку по email сделали
 	user, _ := s.store.FidByEmail(ctx, newUser.Email)
-	if user.Id == 0 {
+	if user.ID == 0 {
 		return models.User{}, errors.New("email zaniat , email already exist")
 
 	}
@@ -41,7 +41,7 @@ func (s *service) Delete(ctx context.Context, id int) error {
 	//перед удалением надо узнать а есть ли вообще такой пользователь
 
 	user, _ := s.store.FidByID(ctx, id)
-	if user.Id == 0 {
+	if user.ID == 0 {
 		//а вот и вернули ошибку из models тк мы её создали и чтобы строки не писать по сути в ней и есть строка
 		return models.ErrUserNotFound
 	}
@@ -50,7 +50,7 @@ func (s *service) Delete(ctx context.Context, id int) error {
 
 func (s *service) Update(ctx context.Context, id int, updUser models.UpdateUser) (models.User, error) {
 	user, _ := s.store.FidByID(ctx, id)
-	if user.Id == 0 {
+	if user.ID == 0 {
 		//а вот и вернули ошибку из models тк мы её создали и чтобы строки не писать по сути в ней и есть строка
 		return models.User{}, models.ErrUserNotFound
 	}
