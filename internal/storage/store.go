@@ -81,6 +81,7 @@ func (st *Store) InitTable() error {
 	_, err = st.pool.Exec(context.Background(), `CREATE TABLE IF NOT EXISTS store.orders_goods (
  orders_id INT REFERENCES store.orders(id),
  goods_id INT REFERENCES store.goods(id),
+ sum INT,
  PRIMARY KEY (orders_id, goods_id)
 )`)
 	if err != nil {
@@ -88,10 +89,11 @@ func (st *Store) InitTable() error {
 	}
 
 	// Создание таблицы rack
-	_, err = st.pool.Exec(context.Background(), `CREATE TABLE IF NOT EXISTS store.rack (
- id SERIAL PRIMARY KEY,
- name VARCHAR,
- main_rack BOOLEAN
+	_, err = st.pool.Exec(context.Background(), `
+	CREATE TABLE 
+	IF NOT EXISTS store.rack (
+ 	id SERIAL PRIMARY KEY,
+	name VARCHAR
 )`)
 	if err != nil {
 		log.Fatalf("Failed to create rack table: %v", err)
@@ -101,17 +103,17 @@ func (st *Store) InitTable() error {
 	_, err = st.pool.Exec(context.Background(), `CREATE TABLE IF NOT EXISTS store.rack_goods (
  rack_id INT REFERENCES store.rack(id),
  goods_id INT REFERENCES store.goods(id),
+ is_main BOOLEAN,
  PRIMARY KEY (rack_id, goods_id)
 )`)
 	if err != nil {
 		log.Fatalf("Failed to create rack_goods table: %v", err)
 	}
 
-	fmt.Println("Создали таблицы")
-	err = st.addDate()
-	if err != nil {
-		log.Fatalf("Failed to AddDate : %v", err)
-	}
+	logrus.Info("Создали таблицы")
+	// наполнение данными таблиц
+	st.addDate()
+
 	return nil
 }
 
@@ -128,12 +130,51 @@ func (st *Store) addDate() error {
 
 	for _, g := range goods {
 		_, err := st.pool.Exec(context.Background(), `
-   INSERT INTO store.goods (name)
-   VALUES ($1)
-  `, g.Name)
+  INSERT INTO store.goods (name)
+  VALUES ($1)
+ `, g.Name)
 		if err != nil {
-			return fmt.Errorf("Failed to insert data into goods table: %v", err)
+			return fmt.Errorf("Failed to insert data into Goods table: %v", err)
 		}
 	}
+
+	// добавление стелажей
+	rackData := []Rack{
+		{Name: "А"},
+		{Name: "Б"},
+		{Name: "В"},
+		{Name: "Ж"},
+		{Name: "З"},
+	}
+
+	for _, g := range rackData {
+		_, err := st.pool.Exec(context.Background(), `
+  INSERT INTO store.rack (name)
+  VALUES ($1)
+ `, g.Name)
+		if err != nil {
+			return fmt.Errorf("Failed to insert data into Rack table: %v", err)
+		}
+	}
+
+	//Добавление заказов
+	ordersData := []Orders{
+		{Num: 10},
+		{Num: 11},
+		{Num: 14},
+		{Num: 15},
+	}
+
+	for _, g := range ordersData {
+		_, err := st.pool.Exec(context.Background(), `
+  INSERT INTO store.orders (num)
+  VALUES ($1)
+ `, g.Num)
+		if err != nil {
+			return fmt.Errorf("Failed to insert data into Orders table: %v", err)
+		}
+	}
+
+	logrus.Info("Заполнили всеми нужными данными")
 	return nil
 }

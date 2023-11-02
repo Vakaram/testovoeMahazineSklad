@@ -20,9 +20,8 @@ type OrdersGoods struct {
 
 // Rack стелажи есть главные bool
 type Rack struct {
-	ID       int    `db:"id"`
-	Name     string `db:"name"`
-	MainRack bool   `db:"main_rack"`
+	ID   int    `db:"id"`
+	Name string `db:"name"`
 }
 
 // RackGoods стелажи на которых лежит товар
