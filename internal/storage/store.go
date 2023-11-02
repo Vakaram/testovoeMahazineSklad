@@ -174,6 +174,69 @@ func (st *Store) addDate() error {
 			return fmt.Errorf("Failed to insert data into Orders table: %v", err)
 		}
 	}
+	goods := []Goods{
+		{Name: "Ноутбук"},
+		{Name: "Телевизор"},
+		{Name: "Телефон"},
+		{Name: "Компьютер"},
+		{Name: "Часы"},
+		{Name: "Микрофон"},
+	}
+
+	for _, g := range goods {
+		_, err := st.pool.Exec(context.Background(), `
+  INSERT INTO store.goods (name)
+  VALUES ($1)
+ `, g.Name)
+		if err != nil {
+			return fmt.Errorf("Failed to insert data into Goods table: %v", err)
+		}
+	}
+
+	// добавление стелажей
+	rackData := []Rack{
+		{Name: "А"},
+		{Name: "Б"},
+		{Name: "В"},
+		{Name: "Ж"},
+		{Name: "З"},
+	}
+
+	for _, g := range rackData {
+		_, err := st.pool.Exec(context.Background(), `
+  INSERT INTO store.rack (name)
+  VALUES ($1)
+ `, g.Name)
+		if err != nil {
+			return fmt.Errorf("Failed to insert data into Rack table: %v", err)
+		}
+	}
+
+	//Связь заказы товар и кол-во
+	ordersGoodsData := []OrdersGoods{
+		{OrdersID: 10, GoodsID: 1, Sum: 2},
+		{OrdersID: 10, GoodsID: 3, Sum: 1},
+		{OrdersID: 10, GoodsID: 6, Sum: 1},
+		{OrdersID: 11, GoodsID: 2, Sum: 3},
+		{OrdersID: 14, GoodsID: 1, Sum: 3},
+		{OrdersID: 14, GoodsID: 4, Sum: 4},
+		{OrdersID: 15, GoodsID: 5, Sum: 1},
+	}
+
+	for _, g := range ordersGoodsData {
+		_, err := st.pool.Exec(context.Background(), `
+  		INSERT INTO store.orders_goods 
+    	( orders_id,goods_id,sum)
+ 		VALUES ($1,$2,$3)`,
+			g.OrdersID, g.GoodsID, g.Sum)
+		if err != nil {
+			return fmt.Errorf("Failed to insert data into Orders table: %v", err)
+		}
+	}
+
+	rackOrderData := []RackGoods{
+		{},
+	}
 
 	logrus.Info("Заполнили всеми нужными данными")
 	return nil

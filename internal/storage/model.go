@@ -16,6 +16,7 @@ type Orders struct {
 type OrdersGoods struct {
 	OrdersID int `db:"orders_id"`
 	GoodsID  int `db:"goods_id"`
+	Sum      int `db:"sum"`
 }
 
 // Rack стелажи есть главные bool
@@ -26,6 +27,7 @@ type Rack struct {
 
 // RackGoods стелажи на которых лежит товар
 type RackGoods struct {
-	RackID  int `db:"rack_id"`
-	GoodsID int `db:"goods_id"`
+	RackID  int  `db:"rack_id"`
+	GoodsID int  `db:"goods_id"`
+	Is_main bool `db:"is_main"`
 }
