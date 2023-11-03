@@ -77,17 +77,6 @@ func (st *Store) InitTable() error {
 		log.Fatalf("Failed to create orders table: %v", err)
 	}
 
-	// Создание таблицы orders_goods
-	_, err = st.pool.Exec(context.Background(), `CREATE TABLE IF NOT EXISTS store.orders_goods (
- orders_id INT REFERENCES store.orders(id),
- goods_id INT REFERENCES store.goods(id),
- sum INT,
- PRIMARY KEY (orders_id, goods_id)
-)`)
-	if err != nil {
-		log.Fatalf("Failed to create orders_goods table: %v", err)
-	}
-
 	// Создание таблицы rack
 	_, err = st.pool.Exec(context.Background(), `
 	CREATE TABLE 
@@ -98,16 +87,17 @@ func (st *Store) InitTable() error {
 	if err != nil {
 		log.Fatalf("Failed to create rack table: %v", err)
 	}
-
-	// Создание таблицы rack_goods
-	_, err = st.pool.Exec(context.Background(), `CREATE TABLE IF NOT EXISTS store.goods_racks (
-     goods_id INT REFERENCES store.goods(id),
- 	 rack_id INT REFERENCES store.rack(id),
-	 is_main BOOLEAN,
- 	 PRIMARY KEY (rack_id, goods_id)
+	// Создание таблицы orders_goods
+	_, err = st.pool.Exec(context.Background(), `CREATE TABLE IF NOT EXISTS store.orders_goods_rask (
+ orders_id INT REFERENCES store.orders(id),
+ rack_id INT REFERENCES store.rack(id),
+ is_main_rack BOOL,
+ goods_id INT REFERENCES store.goods(id),
+ sum INT,
+ PRIMARY KEY (orders_id, goods_id)
 )`)
 	if err != nil {
-		log.Fatalf("Failed to create rack_goods table: %v", err)
+		log.Fatalf("Failed to create orders_goods_rask table: %v", err)
 	}
 
 	logrus.Info("Создали таблицы")
@@ -192,7 +182,7 @@ func (st *Store) addDate() error {
 
 	for _, g := range ordersGoodsData {
 		_, err := st.pool.Exec(context.Background(), `
-  		INSERT INTO store.orders_goods
+  		INSERT INTO store.orders_goods_rask
     	( orders_id,goods_id,sum)
  		VALUES ($1,$2,$3)`,
 			g.OrdersID, g.GoodsID, g.Sum)
@@ -228,7 +218,9 @@ func (st *Store) addDate() error {
 	return nil
 }
 
-// todo дописать проверку на вообще есть ли такой id в базе если нет то пропускаем и пишем в ответ такого заказа нет в базе
+//todo сделать так чтобы эта функция дополнительно тех заказов которые есть в одну группу собирала а те которые есть в другую
+
+// ChecOrderInDB проверяет есть ли такой заказ вообще
 func (st *Store) ChecOrderInDB(id int) (bool, error) {
 	var exists bool // существует?
 	err := st.pool.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM store.orders WHERE num = $1)", id).Scan(&exists)
@@ -247,33 +239,26 @@ func (st *Store) ChecOrderInDB(id int) (bool, error) {
 }
 
 // Запрос по id Order наши товары и их кол-во в заказе
-func (st *Store) ChecOrder(id []int) (idGoods []Orders, err error) {
+func (st *Store) PoluchaemSpisokSIdOrderAndRack(id []int) (idGoods []Orders, err error) {
 	var goodsIDsum []Orders
 
 	for _, v := range id {
 		check, _ := st.ChecOrderInDB(v)
 		if check == true {
-			fmt.Printf("True вижу для id %d", v)
-
-			rows, err := st.pool.Query(context.Background(), "SELECT goods_id FROM store.orders_goods WHERE orders_id = $1", v)
+			//fmt.Printf("True вижу для id %d", v)
+			//Получаем соответствующие id для наших заказов
+			idOrders, err := st.GiveIdInOrders(id)
 			if err != nil {
+				fmt.Printf("Ошибочка =_)1 ", err)
 				return nil, err
 			}
-			//Вопрос а нужно ли тут закрывать rows ?
-			defer rows.Close()
-
-			for rows.Next() {
-				var goodsID int
-				if err := rows.Scan(&goodsID); err != nil {
-					// обработка ошибки
-					return nil, err
-				}
-				goodsIDsum = append(goodsIDsum, Orders{ID: goodsID})
-			}
-
-			if err := rows.Err(); err != nil {
+			//получим все товары связанные с этим id
+			_, err = st.GiveAllGoodsAndSumInOrders(idOrders)
+			if err != nil {
+				fmt.Printf("Ошибочка =_)2 ", err)
 				return nil, err
 			}
+			//получаем из orders_goods_rask id товаров и их sum в стркутуре
 
 		} else {
 			return nil, err
@@ -282,4 +267,63 @@ func (st *Store) ChecOrder(id []int) (idGoods []Orders, err error) {
 	fmt.Printf("Структуру такая %v", goodsIDsum)
 
 	return goodsIDsum, nil
+}
+
+// GiveIdInOrders возвращает ID наших ордеров обратившись в ORDERS
+func (st *Store) GiveIdInOrders(id []int) (idOrders []int, err error) {
+	var ids []int
+	for _, v := range id {
+		rows, err := st.pool.Query(context.Background(), "SELECT id FROM store.orders WHERE num = $1", v)
+		if err != nil {
+			// обработка ошибки
+			logrus.Error("Ошибка при выполнении запроса к базе данных: ", err)
+			return nil, err
+
+		}
+
+		for rows.Next() {
+			var id int
+			err := rows.Scan(&id)
+			if err != nil {
+				// обработка ошибки
+				logrus.Error("Ошибка при сканировании строки: ", err)
+				return nil, err
+			}
+			ids = append(ids, id)
+		}
+	}
+	fmt.Printf("\nВот получил id по Orders их id: %d \n", ids[0])
+	return ids, err
+}
+func (st *Store) GiveAllGoodsAndSumInOrders(idOrders []int) (goodsAmdSumInOrders []OrdersGoods, err error) {
+
+	var idGoodsAndSuminOrders []OrdersGoods
+	for _, v := range idOrders {
+		rows, err := st.pool.Query(context.Background(), "SELECT orders_id,goods_id,sum FROM store.orders_goods_rask WHERE orders_id = $1", v)
+		fmt.Printf("Вот запрос твой %s ", rows)
+		if err != nil {
+			// обработка ошибки
+			logrus.Error("Ошибка при выполнении запроса к базе данных: ", err)
+			return nil, err
+
+		}
+
+		for rows.Next() {
+			var orders_id int
+			var goods_id int
+			var sum int
+			err := rows.Scan(&goods_id, &sum)
+			if err != nil {
+				// обработка ошибки
+				logrus.Error("Ошибка при сканировании строки: ", err)
+				return nil, err
+			}
+			idGoodsAndSuminOrders =
+				append(idGoodsAndSuminOrders, OrdersGoods{OrdersID: orders_id, GoodsID: goods_id, Sum: sum})
+		}
+	}
+	fmt.Printf("\n Получил вот такие товары для заказа их id = %v \n", idGoodsAndSuminOrders)
+	fmt.Printf("\n zzzzz= %s ,%s \n", idGoodsAndSuminOrders[0].GoodsID, idGoodsAndSuminOrders[0].Sum)
+
+	return nil, err
 }

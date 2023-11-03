@@ -14,8 +14,26 @@ type app struct {
 	Store *storage.Store
 }
 
+// NewApp создает новое приложение с конфигом для БД
+func NewApp() *app {
+	// Получаем конфиг
+	configStore := storage.ParseConfigDB()
+	// Создаем pool для бд
+	myStore := storage.New(configStore)
+	//Создание таблиц в базе данных и схем
+	err := myStore.InitTable()
+	if err != nil {
+		fmt.Printf("Ошибка при создание таблиц: %s ", err.Error())
+
+	}
+	app := &app{
+		Store: myStore,
+	}
+	return app
+}
+
 // Start запуск приложение и ожидание ввода
-func Start(myStore *storage.Store) {
+func Start(a *app) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Print("Enter text: ")
@@ -25,21 +43,16 @@ func Start(myStore *storage.Store) {
 		if err != nil {
 			logrus.Panic(err)
 		}
-		//теперь получим наши ID товаров связанные с заказом
+		//получаем заказы по которым нужно найти товары и полки
 		massivOrders := []int{}
 		for _, v := range requestOrdersInput {
 			massivOrders = append(massivOrders, v.Num)
 		}
+		//todo сделать массив элементов которые есть в бд и которых нет в бд и их выносить в отдельный овтет после списка ниже будет красиво
+		//теперь получим что есть ли наш товар в базе данных проверка
 
-		order, err := myStore.ChecOrder(massivOrders)
-		//logrus.Info("Получили заказы функцию вызвали")
-		if err != nil {
-			logrus.Debug(err)
-			return
-		}
-		for _, g := range order {
-			fmt.Printf("Получил вот такой товар по поиску  : %s ", g)
-		}
+		a.Store.PoluchaemSpisokSIdOrderAndRack(massivOrders)
+
 	}
 }
 

@@ -14,9 +14,11 @@ type Orders struct {
 
 // OrdersGoods связь таблиц ордер и товары
 type OrdersGoods struct {
-	OrdersID int `db:"orders_id"`
-	GoodsID  int `db:"goods_id"`
-	Sum      int `db:"sum"`
+	OrdersID int  `db:"orders_id"`
+	Rack_id  int  `db:"rack_id"`
+	Is_main  bool `db:"is_main"`
+	GoodsID  int  `db:"goods_id"`
+	Sum      int  `db:"sum"`
 }
 
 // Rack стелажи есть главные bool
