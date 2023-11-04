@@ -79,25 +79,38 @@ func (st *Store) InitTable() error {
 
 	// Создание таблицы rack
 	_, err = st.pool.Exec(context.Background(), `
-	CREATE TABLE 
-	IF NOT EXISTS store.rack (
+	CREATE TABLE IF NOT EXISTS store.rack (
  	id SERIAL PRIMARY KEY,
-	name VARCHAR
+	name VARCHAR,
+	is_main BOOLEAN
 )`)
 	if err != nil {
 		log.Fatalf("Failed to create rack table: %v", err)
 	}
 	// Создание таблицы orders_goods
-	_, err = st.pool.Exec(context.Background(), `CREATE TABLE IF NOT EXISTS store.orders_goods_rask (
- orders_id INT REFERENCES store.orders(id),
- rack_id INT REFERENCES store.rack(id),
- is_main_rack BOOL,
- goods_id INT REFERENCES store.goods(id),
- sum INT,
- PRIMARY KEY (orders_id, goods_id)
+	_, err = st.pool.Exec(context.Background(), `
+	CREATE TABLE IF NOT EXISTS store.orders_goods (
+    id SERIAL,
+    orders_id INT REFERENCES store.orders(id),
+    goods_id INT REFERENCES store.goods(id),
+    sum INT,
+    PRIMARY KEY (orders_id, goods_id)
 )`)
 	if err != nil {
-		log.Fatalf("Failed to create orders_goods_rask table: %v", err)
+		log.Fatalf("Failed to create orders_goods table: %v", err)
+	}
+
+	// Создание таблицы extra_rack
+	_, err = st.pool.Exec(context.Background(), `
+	CREATE TABLE IF NOT EXISTS store.extra_rack  (
+    id SERIAL,
+  	goods_id INT REFERENCES store.goods (id),
+  	rack_id INT REFERENCES store.rack (id),
+  	PRIMARY KEY (rack_id, goods_id)
+
+)`)
+	if err != nil {
+		log.Fatalf("Failed to create extra_rack table: %v", err)
 	}
 
 	logrus.Info("Создали таблицы")
@@ -171,7 +184,7 @@ func (st *Store) addDate() error {
 
 	//Связь заказы товар и кол-во
 	ordersGoodsData := []OrdersGoods{
-		{OrdersID: 1, GoodsID: 1, Sum: 2}, //1 id  - это 10 заказ
+		//{OrdersID: 1,Rack_id:,Is_main: GoodsID: 1, Sum: 2}, //1 id  - это 10 заказ
 		{OrdersID: 1, GoodsID: 3, Sum: 1},
 		{OrdersID: 1, GoodsID: 6, Sum: 1},
 		{OrdersID: 2, GoodsID: 2, Sum: 3}, //2 id - это 11 заказ и тд
@@ -182,7 +195,7 @@ func (st *Store) addDate() error {
 
 	for _, g := range ordersGoodsData {
 		_, err := st.pool.Exec(context.Background(), `
-  		INSERT INTO store.orders_goods_rask
+  		INSERT INTO store.orders_goods
     	( orders_id,goods_id,sum)
  		VALUES ($1,$2,$3)`,
 			g.OrdersID, g.GoodsID, g.Sum)
@@ -299,7 +312,7 @@ func (st *Store) GiveAllGoodsAndSumInOrders(idOrders []int) (goodsAmdSumInOrders
 
 	var idGoodsAndSuminOrders []OrdersGoods
 	for _, v := range idOrders {
-		rows, err := st.pool.Query(context.Background(), "SELECT orders_id,goods_id,sum FROM store.orders_goods_rask WHERE orders_id = $1", v)
+		rows, err := st.pool.Query(context.Background(), "SELECT orders_id,goods_id,sum FROM store.orders_goods WHERE orders_id = $1", v)
 		fmt.Printf("Вот запрос твой %s ", rows)
 		if err != nil {
 			// обработка ошибки

@@ -39,25 +39,20 @@ func Start(a *app) {
 		fmt.Print("Enter text: ")
 		text, _ := reader.ReadString('\n')
 		//разобрали ответ на id заказов которые нужно чекнуть в бд
-		requestOrdersInput, err := SplitRequest(text)
+		_, err := SplitRequest(text)
 		if err != nil {
 			logrus.Panic(err)
 		}
-		//получаем заказы по которым нужно найти товары и полки
-		massivOrders := []int{}
-		for _, v := range requestOrdersInput {
-			massivOrders = append(massivOrders, v.Num)
-		}
-		//todo сделать массив элементов которые есть в бд и которых нет в бд и их выносить в отдельный овтет после списка ниже будет красиво
-		//теперь получим что есть ли наш товар в базе данных проверка
+		//получаем инфо из orders_goods
 
-		a.Store.PoluchaemSpisokSIdOrderAndRack(massivOrders)
+		////todo сделать массив элементов которые есть в бд и которых нет в бд и их выносить в отдельный овтет после списка ниже будет красиво
 
 	}
 }
 
 // SplitRequest сплитует заказы по запятой формирует стрктуру
 func SplitRequest(text string) ([]storage.RequestedOrders, error) {
+	//todo сделать проверку а цифра ли это?
 	nums := strings.Split(text, ",")
 	var requestNums []storage.RequestedOrders
 	for _, v := range nums {

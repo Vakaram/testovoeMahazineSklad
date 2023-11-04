@@ -1,11 +1,5 @@
 package storage
 
-// Goods товары
-type Goods struct {
-	ID   int    `db:"id"`
-	Name string `db:"name"`
-}
-
 // Orders заказы
 type Orders struct {
 	ID  int `db:"id"`
@@ -19,12 +13,6 @@ type OrdersGoods struct {
 	Is_main  bool `db:"is_main"`
 	GoodsID  int  `db:"goods_id"`
 	Sum      int  `db:"sum"`
-}
-
-// Rack стелажи есть главные bool
-type Rack struct {
-	ID   int    `db:"id"`
-	Name string `db:"name"`
 }
 
 // GoodsRacks стелажи на которых лежит товар
@@ -58,4 +46,27 @@ type Description struct {
 	GoodsPage Goods       //id товара и название
 	OrdersNum Orders      //номер заказа
 	OrderSum  OrdersGoods //кол-во в заказе штук
+}
+
+// Итоговая модель при парсе которой получится показать страницу заказа
+type FullInfoPage struct {
+	IdOrderDB int
+	NumOrder  int
+	Goods     []Goods // товаров может быть несколько
+}
+
+// Goods товары
+type Goods struct {
+	ID   int    `db:"id"`
+	Name string `db:"name"`
+	Sum  int    `db:"sum"`
+	Rack []Rack // содержание для товара его стелажа главного и допов тоже может быть несколько
+}
+
+// Rack стелажи есть главные bool
+// Будут содержаться несколько вариантов []Rack
+type Rack struct {
+	ID     int    `db:"id"`
+	Name   string `db:"name"`
+	IsMain bool   `db:"is_main"`
 }
