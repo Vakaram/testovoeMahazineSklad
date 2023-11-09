@@ -70,3 +70,18 @@ type Rack struct {
 	Name   string `db:"name"`
 	IsMain bool   `db:"is_main"`
 }
+
+// структура соритрованная и читаемая
+
+type RackItog struct {
+	RackName  string
+	GoodsItog []GoodsItog
+}
+
+type GoodsItog struct {
+	IdGoods   int
+	Name      string
+	Order     int
+	Sum       int
+	ExtraRack string
+}

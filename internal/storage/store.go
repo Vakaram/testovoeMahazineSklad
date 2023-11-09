@@ -2,12 +2,14 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sirupsen/logrus"
 	"log"
 	"os"
+	//"strconv"
 )
 
 type Store struct {
@@ -114,126 +116,10 @@ func (st *Store) InitTable() error {
 	}
 
 	logrus.Info("Создали таблицы")
-	// наполнение данными таблиц отключать после первого прогона если не нужны данные иначе будет ошибка ну значит данные уже есть так что не страшно но могут быть дубляжи
-	//err = st.addDate()
-	//if err != nil {
-	//	fmt.Printf("Ошибка при заполнение данных : %s ", err)
-	//}
-
 	return nil
 }
 
-// addDate для наполнения данными
-func (st *Store) addDate() error {
-	// Наполнение таблицы goodsData
-	goodsData := []Goods{
-		{Name: "Ноутбук"},
-		{Name: "Телевизор"},
-		{Name: "Телефон"},
-		{Name: "Компьютер"},
-		{Name: "Часы"},
-		{Name: "Микрофон"},
-	}
-
-	for _, g := range goodsData {
-		_, err := st.pool.Exec(context.Background(), `
-  INSERT INTO store.goods (name)
-  VALUES ($1)
- `, g.Name)
-		if err != nil {
-			return fmt.Errorf("Failed to insert data into Goods table: %v", err)
-		}
-	}
-
-	// добавление стелажей
-	rackData := []Rack{
-		{Name: "А"},
-		{Name: "Б"},
-		{Name: "В"},
-		{Name: "Ж"},
-		{Name: "З"},
-	}
-
-	for _, g := range rackData {
-		_, err := st.pool.Exec(context.Background(), `
-  INSERT INTO store.rack (name)
-  VALUES ($1)
- `, g.Name)
-		if err != nil {
-			return fmt.Errorf("Failed to insert data into Rack table: %v", err)
-		}
-	}
-
-	//Добавление заказов
-	ordersData := []Orders{
-		{Num: 10},
-		{Num: 11},
-		{Num: 14},
-		{Num: 15},
-	}
-
-	for _, g := range ordersData {
-		_, err := st.pool.Exec(context.Background(), `
-  INSERT INTO store.orders (num)
-  VALUES ($1)
- `, g.Num)
-		if err != nil {
-			return fmt.Errorf("Failed to insert data into Orders table: %v", err)
-		}
-	}
-
-	//Связь заказы товар и кол-во
-	ordersGoodsData := []OrdersGoods{
-		//{OrdersID: 1,Rack_id:,Is_main: GoodsID: 1, Sum: 2}, //1 id  - это 10 заказ
-		{OrdersID: 1, GoodsID: 3, Sum: 1},
-		{OrdersID: 1, GoodsID: 6, Sum: 1},
-		{OrdersID: 2, GoodsID: 2, Sum: 3}, //2 id - это 11 заказ и тд
-		{OrdersID: 3, GoodsID: 1, Sum: 3},
-		{OrdersID: 3, GoodsID: 4, Sum: 4},
-		{OrdersID: 4, GoodsID: 5, Sum: 1},
-	}
-
-	for _, g := range ordersGoodsData {
-		_, err := st.pool.Exec(context.Background(), `
-  		INSERT INTO store.orders_goods
-    	( orders_id,goods_id,sum)
- 		VALUES ($1,$2,$3)`,
-			g.OrdersID, g.GoodsID, g.Sum)
-		if err != nil {
-			return fmt.Errorf("Failed to insert data into Orders table: %v", err)
-		}
-	}
-
-	goodsRackData := []GoodsRacks{
-		{1, 1, true},
-		{2, 1, true},
-		{3, 2, true},
-		{3, 5, false},
-		{3, 3, false},
-		{4, 4, true},
-		{5, 4, true},
-		{5, 1, false},
-		{6, 4, true},
-	}
-
-	for _, g := range goodsRackData {
-		_, err := st.pool.Exec(context.Background(), `
-  		INSERT INTO store.goods_racks
-    	(goods_id ,rack_id ,is_main)
- 		VALUES ($1,$2,$3)`,
-			g.GoodsID, g.RackID, g.IsMain)
-		if err != nil {
-			return fmt.Errorf("Failed to insert data into Orders table: %v", err)
-		}
-	}
-
-	logrus.Info("Заполнили всеми нужными данными")
-	return nil
-}
-
-//todo сделать так чтобы эта функция дополнительно тех заказов которые есть в одну группу собирала а те которые есть в другую
-
-// ChecOrderInDB проверяет есть ли такой заказ вообще
+// ChecOrderInDB проверяет есть ли такой заказ вообще и возвращает 2 списка в котором есть и в котором нет данных
 func (st *Store) ChecOrderInDB(id int) (bool, error) {
 	var exists bool // существует?
 	err := st.pool.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM store.orders WHERE num = $1)", id).Scan(&exists)
@@ -243,100 +129,227 @@ func (st *Store) ChecOrderInDB(id int) (bool, error) {
 		return false, err
 	}
 	if exists {
-		logrus.Info("Запись существует по ID")
+		//logrus.Info("Запись существует по ID верну тру")
 		return true, nil
 	} else {
-		logrus.Info("Запись не существует по ID")
+		//logrus.Info("Запись не существует по ID")
 		return false, nil
 	}
 }
 
-// Запрос по id Order наши товары и их кол-во в заказе
-func (st *Store) PoluchaemSpisokSIdOrderAndRack(id []int) (idGoods []Orders, err error) {
-	var goodsIDsum []Orders
+// FullInfoPage вернет нам id оредров и начнет строить струтктуру FullInfoPage
+func (st *Store) FullInfoPage(id []int) (readyAnswer []FullInfoPage, ordersDontExist []int, err error) {
+	//то что будем возвращать
+	var idOrdersAndGoodsReturn []FullInfoPage
+	var noDataOrderReturn []int // если не будет при проверке то добавим сюда
 
 	for _, v := range id {
-		check, _ := st.ChecOrderInDB(v)
+		// вывозвим проверку есть ли такой заказ в базе
+		check, err := st.ChecOrderInDB(v)
+		if err != nil {
+			return nil, nil, err
+		}
 		if check == true {
-			//fmt.Printf("True вижу для id %d", v)
-			//Получаем соответствующие id для наших заказов
-			idOrders, err := st.GiveIdInOrders(id)
+			//fmt.Print("Зашли в Тру ")
+			// получим id этого заказа для таблицы orders_goods
+			idInOrder, err := st.ZaprosOrderID(v)
 			if err != nil {
-				fmt.Printf("Ошибочка =_)1 ", err)
-				return nil, err
+				return nil, nil, err
 			}
-			//получим все товары связанные с этим id
-			_, err = st.GiveAllGoodsAndSumInOrders(idOrders)
-			if err != nil {
-				fmt.Printf("Ошибочка =_)2 ", err)
-				return nil, err
-			}
-			//получаем из orders_goods_rask id товаров и их sum в стркутуре
+			//fmt.Printf("Получаю вот такой список ID в ZaprosOrderID %d ", idInOrder)
+			idOrdersAndGoodsReturn = append(idOrdersAndGoodsReturn, FullInfoPage{IdOrderDB: idInOrder, NumOrder: v})
 
 		} else {
-			return nil, err
+			fmt.Print("Зашли в Фолс ")
+			//если такого заказа нет то добавим этот id в ordersDontExist
+			noDataOrderReturn = append(noDataOrderReturn, v)
 		}
 	}
-	fmt.Printf("Структуру такая %v", goodsIDsum)
+	//fmt.Printf("Структуру если Заказ был такая до  %v", idOrdersAndGoodsReturn)
+	//fmt.Printf("Спискок num если заказа нет в бд %v", noDataOrderReturn)
 
-	return goodsIDsum, nil
+	//Далее предлагаю обогатить нашу структуру доп данными =)
+	addOrdresdForFULL, err := st.AddOrdersInFullPage(idOrdersAndGoodsReturn)
+	//fmt.Printf("Структуру если Заказ был такая После11111  %v", addOrdresdForFULL)
+	//теперь обоготим данными о стелажах rack
+	idOrdersAndGoodsReturn, err = st.AddRackInFullPage(addOrdresdForFULL)
+	//fmt.Printf("Структуру если Заказ был такая После4444  %+v \n", idOrdersAndGoodsReturn)
+
+	return idOrdersAndGoodsReturn, noDataOrderReturn, nil
+
 }
 
-// GiveIdInOrders возвращает ID наших ордеров обратившись в ORDERS
-func (st *Store) GiveIdInOrders(id []int) (idOrders []int, err error) {
-	var ids []int
-	for _, v := range id {
-		rows, err := st.pool.Query(context.Background(), "SELECT id FROM store.orders WHERE num = $1", v)
+// ZaprosOrderID возвращает ID наших ордеров обратившись в ORDERS
+func (st *Store) ZaprosOrderID(idNum int) (idOrders int, err error) {
+	var zeroIdErr int
+	//fmt.Printf("\n Вызвали функцию Запрос Ордера ИД и получил на вход такой инт %d ", idNum)
+	row, err := st.pool.Query(context.Background(), "SELECT id FROM store.orders WHERE num = $1", idNum)
+	if err != nil {
+		// обработка ошибки
+		logrus.Error("Ошибка при выполнении запроса к базе данных: ", err)
+		return zeroIdErr, err
+
+	}
+
+	var id int
+	if row.Next() {
+		err = row.Scan(&id)
+		if err != nil {
+			fmt.Printf("\n Ошибка при скане ,%v,%v", err)
+			return zeroIdErr, err
+		}
+	} else {
+		fmt.Println("Отсутствуют результаты запроса в сканирование ")
+		return zeroIdErr, errors.New("Отсутствуют результаты запроса")
+	}
+
+	//fmt.Printf("Вижу вот такой id %d для num %d", id, idNum)
+	return id, err
+}
+
+func (st *Store) AddOrdersInFullPage(fullPage []FullInfoPage) (fullPageAddGoods []FullInfoPage, err error) {
+	var fullPageReturn []FullInfoPage //
+	// сделаем запрос в orders_goods по id из fullInfoPage и получим там наши товары
+	//elem == 0
+	for _, v := range fullPage {
+		//fmt.Print("искать буду для id ", v.IdOrderDB)
+		rows, err := st.pool.Query(context.Background(), ""+
+			//переименовать store.orders_goods_rask на store.orders_goods
+			"SELECT goods_id,sum FROM store.orders_goods_rask WHERE orders_id = $1",
+			v.IdOrderDB)
+
+		//fmt.Printf("Запрос выглядит так SELECT goods_id,sum FROM store.orders_goods WHERE orders_id = $1,%d или %d", v.IdOrderDB)
+
 		if err != nil {
 			// обработка ошибки
 			logrus.Error("Ошибка при выполнении запроса к базе данных: ", err)
 			return nil, err
 
 		}
-
+		//создаем новый фулл падже и туда прокидываем наши данные которые знаем
+		// обявляем goods который засуним в fullPage
+		var GoodsAdd []Goods
+		//что заберем из запроса
 		for rows.Next() {
-			var id int
-			err := rows.Scan(&id)
+			var goods Goods
+			err = rows.Scan(&goods.ID, &goods.Sum)
 			if err != nil {
-				// обработка ошибки
-				logrus.Error("Ошибка при сканировании строки: ", err)
+				fmt.Printf("\n Ошибка при скане ,%v,%v", err)
 				return nil, err
 			}
-			ids = append(ids, id)
+			//в цикле обогащаем данные через next собираем все товары подходящшие по id
+			// Дополнительный запрос на получение имени товара
+			err = st.pool.QueryRow(context.Background(), "SELECT name FROM store.goods WHERE id = $1", goods.ID).Scan(&goods.Name)
+			if err != nil {
+				fmt.Printf("\n Ошибка при получении имени товара ,%v,%v", err)
+				return nil, err
+			}
+			GoodsAdd = append(GoodsAdd, goods)
 		}
-	}
-	fmt.Printf("\nВот получил id по Orders их id: %d \n", ids[0])
-	return ids, err
-}
-func (st *Store) GiveAllGoodsAndSumInOrders(idOrders []int) (goodsAmdSumInOrders []OrdersGoods, err error) {
+		//fmt.Printf("После обогащения циклом :v ", GoodsAdd)
+		//после сканирования и обогащения Orders то мы обогатим FullPageReturn для [0] нулевого жлемента вооот
+		fullPageReturn = append(fullPageReturn, FullInfoPage{IdOrderDB: v.IdOrderDB, NumOrder: v.NumOrder, Goods: GoodsAdd})
 
-	var idGoodsAndSuminOrders []OrdersGoods
-	for _, v := range idOrders {
-		rows, err := st.pool.Query(context.Background(), "SELECT orders_id,goods_id,sum FROM store.orders_goods WHERE orders_id = $1", v)
-		fmt.Printf("Вот запрос твой %s ", rows)
+	}
+
+	return fullPageReturn, nil
+
+}
+
+// AddRackInFullPage Добавляет стелажи
+func (st *Store) AddRackInFullPage(fullPage []FullInfoPage) (fullPageAddGoods []FullInfoPage, err error) {
+	//Пришла вот такая стрктуруа
+	//fmt.Printf("Структуру если Заказ был такая После3333  %v", fullPage)
+
+	var fullPageReturn []FullInfoPage //
+	// сделаем запрос в extra_rack получим все связи с таблицей -- вынесим в отдельную функцию
+	// Далее по этим связям наполним данные rack для FullInfoPage
+	// Хитро ренджим по элементам как по дереву
+	for _, v := range fullPage {
+		var goodsAdd []Goods
+		//fmt.Printf("ПРоход для элемента Fill Page : %s ", strconv.Itoa(v.Goods[i].ID))
+		for _, vGods := range v.Goods {
+			idRack, err := st.GiveExtraRackRack_id(vGods.ID)
+			if err != nil {
+				return nil, err
+			}
+			//получили id_rack для товара и теперь получим его стелажи Rack
+			//fmt.Printf("Id для поиска в rack  :%v ", idRack)
+			rackForGods, err := st.GiveRackByIdRackID(idRack)
+			if err != nil {
+				return []FullInfoPage{}, nil
+			}
+			goodsAdd = append(goodsAdd, Goods{ID: vGods.ID, Name: vGods.Name, Sum: vGods.Sum, Rack: rackForGods})
+			//fmt.Printf("Goods получился вот такой : %v", goodsAdd)
+			// Осталось только добавить это к общему завершаещему массиву
+		}
+		fullPageReturn = append(fullPageReturn, FullInfoPage{v.IdOrderDB, v.NumOrder, goodsAdd})
+	}
+	//fmt.Printf("Вижу 123 fullPageRetur %v", fullPageReturn)
+
+	return fullPageReturn, nil
+}
+
+// GiveExtraRackRack_id вернет связанные с id товара все его места в на стелажах
+func (st *Store) GiveExtraRackRack_id(goodsId int) (extraRackId []int, err error) {
+	var extraRackIdReturn []int
+	// делать запрос на получение массива int из extraRack
+	rows, err := st.pool.Query(context.Background(), ""+
+		//переименовать store.orders_goods_rask на store.orders_goods
+		"SELECT rack_id FROM store.extra_rack WHERE goods_id = $1",
+		goodsId)
+
+	if err != nil {
+		// обработка ошибки
+		logrus.Error("Ошибка при выполнении запроса к базе данных: ", err)
+		return nil, err
+
+	}
+	//создаем новый фулл падже и туда прокидываем наши данные которые знаем
+	// обявляем goods который засуним в fullPage
+	//что заберем из запроса
+	for rows.Next() {
+		var goods_id int
+		err = rows.Scan(&goods_id)
+		if err != nil {
+			fmt.Printf("\n Ошибка при скане ,%v,%v", err)
+			return nil, err
+		}
+		//в цикле обогащаем данные через next собираем все товары подходящшие по id
+		extraRackIdReturn = append(extraRackIdReturn, goods_id)
+	}
+	//fmt.Printf("Id для поиска в rack  :%v ", extraRackIdReturn)
+	//после сканирования и обогащения Orders то мы обогатим FullPageReturn для [0] нулевого жлемента вооот
+
+	return extraRackIdReturn, nil
+
+}
+
+func (st *Store) GiveRackByIdRackID(rackID []int) (rackForGoods []Rack, err error) {
+	// объявим структруу новую и туда добавим данные
+	var rackForGoodsReturn []Rack
+	for _, v := range rackID {
+		rows, err := st.pool.Query(context.Background(), ""+
+			//переименовать store.orders_goods_rask на store.orders_goods
+			"SELECT id,name,is_main FROM store.rack WHERE id = $1",
+			v)
 		if err != nil {
 			// обработка ошибки
 			logrus.Error("Ошибка при выполнении запроса к базе данных: ", err)
-			return nil, err
-
+			return []Rack{}, err
 		}
 
+		var rackValue Rack
 		for rows.Next() {
-			var orders_id int
-			var goods_id int
-			var sum int
-			err := rows.Scan(&goods_id, &sum)
+			err = rows.Scan(&rackValue.ID, &rackValue.Name, &rackValue.IsMain)
 			if err != nil {
-				// обработка ошибки
-				logrus.Error("Ошибка при сканировании строки: ", err)
-				return nil, err
+				fmt.Printf("\n Ошибка при скане ,%v,%v", err)
+				return []Rack{}, err
 			}
-			idGoodsAndSuminOrders =
-				append(idGoodsAndSuminOrders, OrdersGoods{OrdersID: orders_id, GoodsID: goods_id, Sum: sum})
 		}
-	}
-	fmt.Printf("\n Получил вот такие товары для заказа их id = %v \n", idGoodsAndSuminOrders)
-	fmt.Printf("\n zzzzz= %s ,%s \n", idGoodsAndSuminOrders[0].GoodsID, idGoodsAndSuminOrders[0].Sum)
+		rackForGoodsReturn = append(rackForGoodsReturn, rackValue)
 
-	return nil, err
+	}
+	//fmt.Printf("Вижу!!!!!!!! :", rackForGoodsReturn)
+	return rackForGoodsReturn, err
 }
