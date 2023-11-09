@@ -1,6 +1,5 @@
 package app
 
-// todo добавить запрос для того чтобы еще имя писалось в сткрутуре
 import (
 	"bufio"
 	"fmt"
@@ -63,14 +62,12 @@ func Start(a *app) {
 
 		itog, err := BeautifulText(itogStructForText, ordersDontExist, intOrdersSplit)
 		fmt.Printf(itog)
-		////todo сделать массив элементов которые есть в бд и которых нет в бд и их выносить в отдельный овтет после списка ниже будет красиво
 		//logrus.Info(readableAnswer)
 	}
 }
 
 // SplitRequest сплитует заказы по запятой формирует стрктуру
 func SplitRequest(text string) (orderNum []int, err error) {
-	//todo сделать проверку а цифра ли это?
 	nums := strings.Split(text, ",")
 	var requestNums []int
 	for _, v := range nums {
